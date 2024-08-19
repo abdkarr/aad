@@ -55,10 +55,13 @@ def gen_confusion_mat(
         except ValueError:
             raise ValueError("Invalid annotator type.")
 
-    rng = _check_rng(rng)
+    if annotator_type == AnnotatorType.RELIABLE:
+        if reliability is None:
+            reliability = 1
+        elif reliability < 1:
+            raise ValueError("Reliability must be >= 1.")
 
-    if (reliability is None) and (annotator_type == "reliable"):
-        reliability = 1
+    rng = _check_rng(rng)    
 
     # Annotator randomly picks a value
     if annotator_type == AnnotatorType.UNIFORM:

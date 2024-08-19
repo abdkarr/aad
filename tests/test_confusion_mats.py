@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 
 from aad.gen_confusion_mat import gen_confusion_mat
+from aad.typing import AnnotatorType
 
 def test_reliable_annotator():
     n_classes = 3
@@ -76,3 +77,24 @@ def test_reproducibility():
     confusion_mat2 = gen_confusion_mat(n_classes, n_annotators, "reliable", rng=1)
 
     assert np.all(np.abs(confusion_mat1 - confusion_mat2) < 1e-8)
+
+def test_annotator_type_arg():
+    n_classes = 3
+    n_annotators = 2
+    wrong_annot_type = "wrong"
+
+    with pytest.raises(ValueError):
+        confusion_mat = gen_confusion_mat(n_classes, n_annotators, wrong_annot_type)
+
+
+def test_reliablity_arg():
+    n_classes = 3
+    n_annotators = 2
+    valid_reliability = 2 # >=1 are valid
+
+    gen_confusion_mat(n_classes, n_annotators, "reliable", reliability=valid_reliability)
+
+    invalid_reliability = 0.9
+    with pytest.raises(ValueError):
+        gen_confusion_mat(n_classes, n_annotators, "reliable", reliability=invalid_reliability)
+
