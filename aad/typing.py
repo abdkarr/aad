@@ -11,3 +11,6 @@ class AnnotatorType(Enum):
     UNIFORM = "uniform" # uniformly picks a random response 
     SAME = "same" # picks the same class for all data points
     ADVERSE = "adverse" # picks an answer that is different than true class
+
+class AdversaryType(Enum):
+    RANDOM = "random"
