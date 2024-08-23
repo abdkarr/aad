@@ -84,8 +84,7 @@ def test_annotator_type_arg():
     wrong_annot_type = "wrong"
 
     with pytest.raises(ValueError):
-        confusion_mat = gen_confusion_mat(n_classes, n_annotators, wrong_annot_type)
-
+         gen_confusion_mat(n_classes, n_annotators, wrong_annot_type)
 
 def test_reliablity_arg():
     n_classes = 3

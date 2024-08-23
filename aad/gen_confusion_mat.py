@@ -7,9 +7,9 @@ from ._input_checks import _check_rng
 
 @njit
 def _gen_confusion_mat_nb(
-    n_classes: int, n_annotators: int, annot_type: AnnotatorType, reliability: float, 
-    rng = np.random.Generator
-):
+        n_classes: int, n_annotators: int, annot_type: AnnotatorType, reliability: float, 
+        rng = np.random.Generator
+    ) -> np.array:
     confusion_mats = np.zeros((n_classes, n_classes, n_annotators))
 
     for a in range(n_annotators):
@@ -47,7 +47,7 @@ def gen_confusion_mat(
         n_classes: int, n_annotators: int, 
         annotator_type: AnnotatorType | str = AnnotatorType.RELIABLE, 
         reliability: float | None = 1, rng: RNG_TYPE = None
-    ):
+    ) -> np.array:
 
     if isinstance(annotator_type, str):
         try:
