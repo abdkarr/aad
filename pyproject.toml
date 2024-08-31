@@ -9,11 +9,15 @@ readme = "README.md"
 python = ">=3.12"
 numpy = "<2.1.0" # For numba
 numba = ">=0.60.0"
+statsmodels = ">=0.14.2"
+pandas = {extras = ["feather", "parquet"], version = ">=2.2.2"}
 
 [tool.poetry.group.dev.dependencies]
 jupyter = ">=1.0.0"
-pytest = "^8.3.2"
-pytest-cov = "^5.0.0"
+pytest = ">=8.3.2"
+pytest-cov = ">=5.0.0"
+matplotlib = ">=3.9.2"
+seaborn = ">=0.13.2"
 
 [build-system]
 requires = ["poetry-core"]

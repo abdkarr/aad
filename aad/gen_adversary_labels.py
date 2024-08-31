@@ -2,10 +2,12 @@ import numpy as np
 
 from .typing import AdversaryType, RNG_TYPE
 from ._input_checks import _check_rng
+from .gen_confusion_mat import gen_confusion_mat
+from .gen_annotator_labels import gen_annotator_labels
 
 def _gen_random_adversaries(
-        gt_labels, groups, p_obs, p_attacked, collude_groups, same_resp_per_class, 
-        same_resp_across_groups, rng: np.random.Generator
+        gt_labels, groups, p_obs, obs_all_attacked, p_attacked, collude_groups, 
+        same_resp_per_class, same_resp_across_groups, rng: np.random.Generator
     ):
     n_groups = len(groups)
     n_data_points = len(gt_labels)
@@ -58,17 +60,102 @@ def _gen_random_adversaries(
         # Generate responses for data points not attacked 
         if not collude_groups:
             points_not_attacked = rng.choice(n_data_points, n_points_not_attacked, replace=False)
+            
         group_responses[:, points_not_attacked] = rng.integers(
             1, n_classes+1, size=(group_size, n_points_not_attacked)
         )
         
         # Mask annotators responses based on observation probabilities
         for a in range(group_size):
-            group_responses[a] *= rng.binomial(1, p_obs[a], n_data_points)
+            if obs_all_attacked:
+                if p_attacked < 1:
+                    p_obs_not_attacked = max(0, (p_obs[a] - p_attacked)/(1 - p_attacked))
+                    mask = rng.binomial(1, p_obs_not_attacked, n_points_not_attacked)
+                    group_responses[a, points_not_attacked] = group_responses[a, points_not_attacked]*mask
+            else:
+                group_responses[a] *= rng.binomial(1, p_obs[a], n_data_points)
 
         responses.append(group_responses)
 
     return responses
+
+def _gen_ds_adversaries(
+        gt_labels, groups, p_obs, obs_all_attacked, p_attacked, collude_groups, 
+        same_resp_per_class, same_resp_across_groups, reliability, 
+        rng: np.random.Generator
+    ):
+    n_groups = len(groups)
+    n_data_points = len(gt_labels)
+    n_classes = len(np.unique(gt_labels))
+
+    # All groups attack the same data points
+    n_points_not_attacked = int(np.floor((1-p_attacked)*n_data_points))
+    if collude_groups:
+        points_not_attacked = rng.choice(n_data_points, n_points_not_attacked, replace=False)
+    else:
+        same_resp_across_groups = False 
+
+    # All groups label the attacked data points the same way
+    if same_resp_across_groups:
+        common_response = np.zeros(n_data_points)
+        for k in range(1, n_classes + 1):
+            other_classes = np.setdiff(np.arange(1, n_classes+1), k)
+            points_in_k = np.where(gt_labels == k)[0]
+
+            # Sample responses for points in class k
+            n_responses = len(points_in_k)
+            if same_resp_per_class:
+                # Data points from the same class are labelled the same
+                n_responses = 1
+
+            common_response[points_in_k] = rng.choice(other_classes, n_responses)
+                
+    responses = []
+    for g in range(n_groups):
+        group = groups[g]
+        group_size = len(group)
+        
+        # Generate initial responses
+        if same_resp_across_groups:
+            group_responses = np.tile(common_response, (group_size, 1))
+        else:
+            group_responses = np.zeros((group_size, n_data_points))
+            for k in range(1, n_classes+1):
+                
+                other_classes = np.setdiff1d(np.arange(1, n_classes+1), k)
+                points_in_k = np.where(gt_labels == k)[0]
+                
+                if same_resp_per_class:
+                    # Data points from the same class are labelled the same
+                    group_responses[:, points_in_k] = rng.choice(other_classes)
+                else:
+                    tmp = rng.choice(other_classes, len(points_in_k))
+                    group_responses[:, points_in_k] = np.tile(tmp, (group_size, 1))
+
+        # Generate responses for data points not attacked 
+        if not collude_groups:
+            points_not_attacked = rng.choice(n_data_points, n_points_not_attacked, replace=False)
+        
+        confusion_mats = gen_confusion_mat(
+            n_classes, group_size, reliability=reliability, rng=rng
+        )
+        labels = gen_annotator_labels(confusion_mats, gt_labels[points_not_attacked], rng=rng)
+        group_responses[:, points_not_attacked] = labels
+        
+        # Mask annotators responses based on observation probabilities
+        for a in range(group_size):
+            if obs_all_attacked:
+                if p_attacked < 1:
+                    p_obs_not_attacked = max(0, (p_obs[a] - p_attacked)/(1 - p_attacked))
+                    mask = rng.binomial(1, p_obs_not_attacked, n_points_not_attacked)
+                    group_responses[a, points_not_attacked] = group_responses[a, points_not_attacked]*mask
+            else:
+                group_responses[a] *= rng.binomial(1, p_obs[a], n_data_points)
+
+        responses.append(group_responses)
+
+    return responses
+
 
 def gen_adversary_labels(
         gt_labels, 
@@ -76,10 +163,12 @@ def gen_adversary_labels(
         adversary_type: AdversaryType | str = "random",
         p_attacked: float = 0.1,
         p_obs: float = 1, 
+        obs_all_attacked: bool = False,
         n_groups: int = 1,
         collude_groups: bool = False,
         same_resp_per_class: bool = False,
         same_resp_across_groups: bool = False,
+        reliability: float = 1,
         rng: RNG_TYPE = None
     ):
     """_summary_
@@ -141,8 +230,13 @@ def gen_adversary_labels(
     
     if adversary_type == AdversaryType.RANDOM:
         responses = _gen_random_adversaries(
-            gt_labels, groups, p_obs, p_attacked, collude_groups, same_resp_per_class, 
+            gt_labels, groups, p_obs, obs_all_attacked, p_attacked, collude_groups, same_resp_per_class, 
             same_resp_across_groups, rng
+        )
+    elif adversary_type == AdversaryType.DS:
+        responses = _gen_ds_adversaries(
+            gt_labels, groups, p_obs, obs_all_attacked, p_attacked, collude_groups, 
+            same_resp_per_class, same_resp_across_groups, reliability, rng
         )
 
     return responses[0] if n_groups == 1 else responses

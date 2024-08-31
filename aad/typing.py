@@ -14,3 +14,4 @@ class AnnotatorType(Enum):
 
 class AdversaryType(Enum):
     RANDOM = "random"
+    DS = "ds"

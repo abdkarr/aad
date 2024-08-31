@@ -47,7 +47,7 @@ def gen_confusion_mat(
         n_classes: int, n_annotators: int, 
         annotator_type: AnnotatorType | str = AnnotatorType.RELIABLE, 
         reliability: float | None = 1, rng: RNG_TYPE = None
-    ) -> np.array:
+    ) -> np.ndarray:
 
     if isinstance(annotator_type, str):
         try:

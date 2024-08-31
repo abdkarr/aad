@@ -9,7 +9,7 @@ from ._input_checks import _check_rng
 def _gen_annotator_labels_nb(
         confusion_mats: np.array, gt_labels: np.array, p_obs: np.array, 
         ensure_all_classes: bool, rng: np.random.Generator
-    ) -> np.array:
+    ) -> np.ndarray:
 
     n_annotators = confusion_mats.shape[2]
     n_classes = confusion_mats.shape[0]
@@ -58,7 +58,7 @@ def _gen_annotator_labels_nb(
 def gen_annotator_labels(
         confusion_mats: np.ndarray, gt_labels: np.ndarray, p_obs: float | np.ndarray = 1, 
         ensure_all_classes: bool = True, rng: RNG_TYPE = None
-    ):
+    ) -> np.ndarray:
 
     rng = _check_rng(rng)
 

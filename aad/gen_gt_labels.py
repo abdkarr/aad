@@ -4,7 +4,7 @@ from .typing import RNG_TYPE
 from ._input_checks import _check_rng
 
 def gen_gt_labels(n_classes: int, n_data_points: int, rng: RNG_TYPE = None) \
-    -> tuple[np.array, np.array]:
+    -> tuple[np.ndarray, np.ndarray]:
     rng = _check_rng(rng)
 
     class_priors = rng.random(n_classes)
