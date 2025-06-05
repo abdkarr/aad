@@ -19,6 +19,7 @@ pytest-cov = ">=5.0.0"
 matplotlib = ">=3.9.2"
 seaborn = ">=0.13.2"
 tikzplotlib = {git = "https://github.com/abdkarr/tikzplotlib.git"}
+black = ">=25.1.0"
 
 [build-system]
 requires = ["poetry-core"]
