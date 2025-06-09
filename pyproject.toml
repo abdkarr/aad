@@ -11,6 +11,8 @@ numpy = "<2.1.0" # For numba
 numba = ">=0.60.0"
 statsmodels = ">=0.14.2"
 pandas = {extras = ["feather", "parquet"], version = ">=2.2.2"}
+networkx = ">=3.5"
+scikit-learn = ">=1.7.0"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = ">=1.0.0"
@@ -20,6 +22,11 @@ matplotlib = ">=3.9.2"
 seaborn = ">=0.13.2"
 tikzplotlib = {git = "https://github.com/abdkarr/tikzplotlib.git"}
 black = ">=25.1.0"
+tqdm = ">=4.67.1"
+mkdocs = ">=1.6.1"
+mkdocstrings = {extras = ["python"], version = ">=0.27.0"}
+mkdocs-material = ">=9.5.49"
+markdown-exec = {extras = ["ansi"], version = ">=1.10.0"}
 
 [build-system]
 requires = ["poetry-core"]
