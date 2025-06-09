@@ -28,7 +28,7 @@ plugins:
 - mkdocstrings:
     handlers: 
       python:
-        import:
+        inventories:
           - https://docs.python.org/3/objects.inv
           - https://networkx.org/documentation/stable/objects.inv
           - https://numpy.org/doc/stable/objects.inv
@@ -40,7 +40,7 @@ plugins:
           show_source: false
           # Headings
           show_root_heading: true
-          show_root_full_path: false
+          show_root_full_path: true
           heading_level: 3
           show_symbol_type_toc: true
           show_symbol_type_heading: true
@@ -50,7 +50,7 @@ plugins:
           # Signatures
           annotations_path: brief
           separate_signature: false
-          show_signature_annotations: true
+          show_signature_annotations: false
           modernize_annotations: true
           line_length: 80
           signature_crossrefs: true
@@ -86,4 +86,4 @@ nav:
   - Home: index.md
   - API:
     - API: api/index.md
-    - Data: api/datasets.md
+    - datasets: api/datasets.md

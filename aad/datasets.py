@@ -18,7 +18,7 @@ def read_rte(
 
     This function looks for the data file `root_dir/rte/rte.standardized.tsv`
     to read RTE dataset. If this file does not exist and parameter `download`
-    is True, it will attempt to download the file from remote server at 
+    is True, it will attempt to download the file from the remote server at 
     [here](https://web.archive.org/web/20230331023329/https://sites.google.com/site/nlpannotations/).
 
     Parameters
@@ -26,7 +26,7 @@ def read_rte(
     root_dir :
         The directory under which to look for `rte` folder
     download :
-        Whether to download the data from remote server if
+        Whether to download the data from the remote server if
         `root_dir/rte/rte.standardized.tsv` is not found
 
     Returns
@@ -36,7 +36,7 @@ def read_rte(
         by ith worker for jth task. `response_mat[i, j] = 0` if no label is provided
         by the ith worker for jth task.
     gt_labels :
-        (N, ) dimensional vector where gt_labels[i] is the ground truth label of
+        (N, ) dimensional vector where `gt_labels[i]` is the ground truth label of
         ith task.
 
     Raises
