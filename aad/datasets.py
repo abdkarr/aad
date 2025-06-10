@@ -21,6 +21,18 @@ def read_rte(
     is True, it will attempt to download the file from the remote server at 
     [here](https://web.archive.org/web/20230331023329/https://sites.google.com/site/nlpannotations/).
 
+    ??? Example
+        The following code uses `data` folder under current working directory
+        as `root_dir` and loads (and downloads if not exist) the RTE data.  
+
+        ```
+        from pathlib import Path
+        import aad
+
+        root_dir = Path("data")
+        response_mat, gt_labels = datasets.read_rte(root_dir, download=True)
+        ```
+
     Parameters
     ----------
     root_dir :
@@ -32,11 +44,11 @@ def read_rte(
     Returns
     -------
     response_mat :
-        (M, N) dimensional matrix where `response_mat[i, j]` is the label provided
+        $(M, N)$ dimensional matrix where `response_mat[i, j]` is the label provided
         by ith worker for jth task. `response_mat[i, j] = 0` if no label is provided
         by the ith worker for jth task.
     gt_labels :
-        (N, ) dimensional vector where `gt_labels[i]` is the ground truth label of
+        $(N, )$ dimensional vector where `gt_labels[i]` is the ground truth label of
         ith task.
 
     Raises

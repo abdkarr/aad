@@ -40,7 +40,7 @@ plugins:
           show_source: false
           # Headings
           show_root_heading: true
-          show_root_full_path: true
+          show_root_full_path: false
           heading_level: 3
           show_symbol_type_toc: true
           show_symbol_type_heading: true
@@ -87,3 +87,5 @@ nav:
   - API:
     - API: api/index.md
     - datasets: api/datasets.md
+    - simulations: api/simulations.md
+    - typing: api/typing.md

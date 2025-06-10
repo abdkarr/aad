@@ -1,0 +1,1 @@
+from .gen_adversaries import gen_adversaries

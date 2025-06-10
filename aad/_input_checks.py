@@ -1,8 +1,8 @@
 import numpy as np
 
-from .typing import RNG_TYPE
+from .typing import RNGType
 
-def _check_rng(rng: RNG_TYPE):
+def _check_rng(rng: RNGType):
     """Checks if a given input for random number generator is valid.
 
     A valid rng input function can be either an int indicating seed number, 
