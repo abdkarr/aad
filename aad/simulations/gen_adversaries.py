@@ -49,7 +49,7 @@ def gen_adversaries(
     p_target: float,
     p_camo: float,
     rng: typing.RNGType = None,
-) -> npt.NDArray:
+) -> tuple[npt.NDArray, npt.NDArray]:
     r"""Generate a simulated response matrix for adversarial workers.
 
     The function selects a set of tasks that are considered to be targeted by 
@@ -108,6 +108,9 @@ def gen_adversaries(
     response_mat : npt.NDArray
         $(M, N)$ dimensional generated response matrix where $M$ is the number
         of adversaries and $N$ is the number of tasks. 
+    targeted_tasks : npt.NDArray
+        $(N, )$ dimensional binary array where `targeted_tasks[i] = 1` if $i$th 
+        task is targeted, 0 otherwise. 
     """
 
     # Input Checks
@@ -133,8 +136,8 @@ def gen_adversaries(
         class_ids, n_adversaries, n_clean, p_camo, rng
     )
 
-    response_mat = np.zeros((n_adversaries, n_tasks))
+    response_mat = np.zeros((n_adversaries, n_tasks), dtype=np.int64)
     response_mat[:, targeted_tasks] = targeted_response
     response_mat[:, ~targeted_tasks] = camouflage_response
 
-    return response_mat, targeted_tasks
+    return response_mat, targeted_tasks.astype(np.int64)
