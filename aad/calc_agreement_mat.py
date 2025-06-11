@@ -4,7 +4,7 @@ import numpy.typing as npt
 from numba import njit
 
 
-# @njit
+@njit
 def calc_agreement_mat(response_mat: npt.NDArray) -> tuple[npt.NDArray, npt.NDArray]:
     n_workers = response_mat.shape[0]
 
