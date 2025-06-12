@@ -86,6 +86,7 @@ nav:
   - Home: index.md
   - API:
     - API: api/index.md
+    - aggregators: api/aggregators.md
     - datasets: api/datasets.md
     - simulations: api/simulations.md
     - typing: api/typing.md

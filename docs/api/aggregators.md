@@ -1,0 +1,1 @@
+::: aad.majority_voting
