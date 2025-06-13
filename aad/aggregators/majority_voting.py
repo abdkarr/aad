@@ -7,7 +7,7 @@ from scipy import stats
 def _apply(response_mat: npt.NDArray) -> npt.NDArray:
     """Apply majority voting to crowdsourced dataset.
 
-    ??? Example
+    !!! Example
         The following code apply majority voting to find labels for tasks in a 
         crowdsourcing problem. We assume we are given `response_mat`, which is 
         a $(M, N)$ dimension numpy array representing response matrix of a 

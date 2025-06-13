@@ -6,7 +6,54 @@ from scipy import sparse
 from . import majority_voting
 
 
-def _apply(response_mat: npt.NDArray, max_iter: int = 1000):
+def _apply(response_mat: npt.NDArray, max_iter: int = 1000, tol: float = 1e-6) -> dict:
+    r"""Apply Dawid-Skene aggregation to a crowdsourced dataset.
+
+    This function use majority-voting for initializing the Expectation-Maximization (EM)
+    algorithm.
+
+    !!! Example
+        The following code applies Dawid-Skene to estimate task labels of RTE
+        dataset.
+
+        ```
+        from pathlib import Path
+
+        import aad
+
+        data_dir = Path(".")
+        response_mat, gt_labels = aad.datasets.read_rte(data_dir)
+        ds_out = aad.dawid_skene(response_mat)
+        ```
+
+    Parameters
+    ----------
+    response_mat
+        $(M, N)$ dimensional matrix where `response_mat[i, j]` is the label provided
+        by $i$th worker for $j$th task. `response_mat[i, j] = 0` is assumed to
+        indicate no label is given by $i$th worker for $j$th task.
+    max_iter
+        Maximum number EM iterations
+    tol
+        Tolarance to use convergence. At each EM iteration, the changes in model
+        parameters and task classification probabilities are calculated. If the
+        change is smaller than `tol`, EM is deemed as converged.
+
+    Returns
+    -------
+    out : dict
+        Output dictionary consisting of following elements:
+
+        - *"labels"*: $(N, )$ dimensional array where `out["labels"][i]` is
+        the label estimated for $i$th task.
+        - *"probs"*: $(N, K)$ dimensional array where `out["probs"][i, j]`
+        is the probability of $i$th task being $j$th class.
+        - *"confusion_mats"*: $(M, K, K)$ dimensional array where
+        `out["confusion_mats][i, :, :]` is the estimated confusion matrix of 
+        $i$th worker.
+        - *"class_priors"*: $(K, )$ dimensional array of estimated class priors.
+    """
+
     n_workers, n_tasks = response_mat.shape
 
     responses = response_mat[response_mat > 0]
@@ -49,25 +96,55 @@ def _apply(response_mat: npt.NDArray, max_iter: int = 1000):
     for k1 in range(n_classes):
         class_priors[k1] = np.sum(mv_labels == class_ids[k1]) / n_tasks
 
+    probs = np.ones((n_tasks, n_classes)) / n_classes
+
     # EM iterations
-    q = np.ones((n_tasks, n_classes))/n_classes
     for i in range(max_iter):
-        confusion_mats[confusion_mats == 0] = np.finfo(float).eps
-        confusion_mats[np.isnan(confusion_mats)] = np.finfo(float).eps
+        probs_prev = probs
+        confusion_mats_prev = confusion_mats
+        class_priors_prev = class_priors
 
-        # M Step
-        q_new = np.array(
-            [onehot_labels[m] @ np.log(confusion_mats[m]) for m in range(n_workers)]
+        # E-step
+        probs = np.array(
+            [
+                onehot_labels[m] @ np.log(confusion_mats[m] + 1e-6)
+                for m in range(n_workers)
+            ]
         ).sum(axis=0)
-        q_new += np.log(class_priors)
-        q_new = np.exp(q_new)
-        q_new /= np.sum(q_new, axis=1, keepdims=True)
+        probs += np.log(class_priors)
+        probs = np.exp(probs)
+        probs /= np.sum(probs, axis=1, keepdims=True)
 
-        # E Step
-        class_priors_new = np.sum(q_new, axis=0)
-        class_priors_new /= np.sum(class_priors_new)
+        # M-step
+        class_priors = np.sum(class_priors, axis=0)
+        class_priors /= np.sum(class_priors)
 
-        confusion_mats_new = np.array([onehot_labels[m].T @ q_new for m in range(n_workers)])
-        confusion_mats_new /= np.sum(confusion_mats_new, axis=2, keepdims=True)
+        confusion_mats = np.array(
+            [onehot_labels[m].T @ probs for m in range(n_workers)]
+        )
+        normalizer = np.sum(confusion_mats, axis=1, keepdims=True)
+        normalizer[normalizer == 0] = 1
+        confusion_mats /= normalizer
 
-        err_q = np.linalg.norm(q_new - q)
+        # Check convergence
+        probs_change = np.linalg.norm((probs_prev - probs).flatten()) / n_tasks
+        confusion_mats_chage = (
+            np.linalg.norm((confusion_mats_prev - confusion_mats).flatten()) / n_workers
+        )
+        class_priors_change = np.linalg.norm(
+            (class_priors_prev - class_priors).flatten()
+        )
+
+        if (
+            (probs_change < tol)
+            & (confusion_mats_chage < tol)
+            & (class_priors_change < tol)
+        ):
+            break
+
+    return {
+        "labels": class_ids[np.argmax(probs, axis=1)],
+        "probs": probs,
+        "confusion_mats": confusion_mats,
+        "class_priors": class_priors,
+    }
