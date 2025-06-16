@@ -25,7 +25,7 @@ def read_rte(
         The following code uses `data` folder under current working directory
         as `root_dir` and loads (and downloads if not exist) the RTE data.  
 
-        ```
+        ```python
         from pathlib import Path
         import aad
 

@@ -15,7 +15,7 @@ def test_gen_adversaries():
     p_target = 0.1
     p_camo = 0.1
     responses, targeted_tasks = aad.simulations.gen_adversaries(
-        gt_labels, n_adversaries, p_target, p_camo, rng
+        gt_labels, n_adversaries, target_frac=p_target, camo_obs=p_camo
     )
 
     assert isinstance(responses, np.ndarray)
@@ -71,3 +71,23 @@ def test_gen_confusion_mat():
             )
 
     assert is_realibility_correct
+
+
+def test_gen_worker_labels():
+    n_classes = 5
+    reliability = 2
+    n_tasks = 1000
+    p_obs = 0.1
+    n_workers = 100
+    rng = np.random.default_rng()
+
+    confusion_mats = [
+        aad.simulations.gen_confusion_mat(n_classes, reliability)
+        for _ in range(n_workers)
+    ]
+    gt_labels = rng.integers(1, n_classes + 1, n_tasks)
+    labels = aad.simulations.gen_worker_labels(gt_labels, confusion_mats, p_obs)
+
+    assert labels.shape == (n_workers, n_tasks)
+    assert (np.unique(labels[labels > 0]) == np.arange(1, n_classes + 1)).all()
+    assert np.abs(np.mean(labels > 0) - p_obs) < 0.01

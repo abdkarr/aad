@@ -16,7 +16,7 @@ def _apply(response_mat: npt.NDArray, max_iter: int = 1000, tol: float = 1e-6) -
         The following code applies Dawid-Skene to estimate task labels of RTE
         dataset.
 
-        ```
+        ```python
         from pathlib import Path
 
         import aad

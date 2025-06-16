@@ -2,10 +2,11 @@ import numpy as np
 import numpy.typing as npt
 
 from aad._input_checks import _check_rng
+from aad.typing import RNGType
 
 
 def gen_confusion_mat(
-    n_classes: int, reliability: float, rng: np.random.Generator = None
+    n_classes: int, reliability: float, rng: RNGType = None
 ) -> npt.NDArray:
     r"""Generate a confusion matrix for a simulated crowdsourcing worker.
 
@@ -22,7 +23,7 @@ def gen_confusion_mat(
         The following code generates a confusion matrix for a simulated crowdsourcing 
         problem with 5 classes:
 
-        ```
+        ```python
         import aad
 
         n_classes = 5

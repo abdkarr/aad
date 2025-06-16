@@ -13,7 +13,7 @@ def _apply(response_mat: npt.NDArray) -> npt.NDArray:
         a $(M, N)$ dimension numpy array representing response matrix of a 
         crowdsourced dataset.  
 
-        ```
+        ```python
         import aad
 
         mv_labels = aad.majority_voting(response_mat)
