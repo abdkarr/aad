@@ -1,1 +1,2 @@
 from .gen_adversaries import gen_adversaries
+from .gen_confusion_mat import gen_confusion_mat

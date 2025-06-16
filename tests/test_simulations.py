@@ -23,15 +23,51 @@ def test_gen_adversaries():
     assert np.sum(targeted_tasks) == np.floor(p_target * n_tasks)
 
     # Assert responses are the same for all attackers
-    target_responses = responses[:, targeted_tasks]
+    target_responses = responses[:, targeted_tasks == 1]
     assert (target_responses == target_responses[0]).all()
 
     # Assert targeted responses are not equal to ground truth
-    assert (target_responses[0] != gt_labels[targeted_tasks]).all()
+    assert (target_responses[0] != gt_labels[targeted_tasks == 1]).all()
 
     # Assert observation probability for camouflage
     p_camo_hat = np.mean(
-        np.count_nonzero(responses[:, ~targeted_tasks])
-        / (n_adversaries * np.sum(~targeted_tasks))
+        np.count_nonzero(responses[:, targeted_tasks == 0])
+        / (n_adversaries * np.sum(targeted_tasks == 0))
     )
     assert np.abs(p_camo_hat - p_camo) <= 0.01
+
+
+def test_gen_confusion_mat():
+    n_classes = 5
+    reliability = 2
+    confusion_mat = aad.simulations.gen_confusion_mat(n_classes, reliability)
+
+    assert confusion_mat.shape == (n_classes, n_classes)
+
+    # This test include stochasticity, its parameters need to be big enough
+    n_annotators = 20000
+    mean_confusion_mat = np.mean(
+        np.array(
+            [
+                aad.simulations.gen_confusion_mat(n_classes, reliability)
+                for i in range(n_annotators)
+            ]
+        ),
+        axis=0,
+    )
+
+    is_realibility_correct = True
+    for k1 in range(n_classes):
+        for k2 in range(n_classes):
+            if k1 == k2:
+                continue
+
+            is_realibility_correct &= (
+                np.abs(
+                    mean_confusion_mat[k1, k1] / mean_confusion_mat[k2, k1]
+                    - reliability
+                )
+                < 0.1
+            )
+
+    assert is_realibility_correct
