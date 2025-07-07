@@ -116,7 +116,7 @@ def _apply(response_mat: npt.NDArray, max_iter: int = 1000, tol: float = 1e-6) -
         probs /= np.sum(probs, axis=1, keepdims=True)
 
         # M-step
-        class_priors = np.sum(class_priors, axis=0)
+        class_priors = np.sum(probs, axis=0)
         class_priors /= np.sum(class_priors)
 
         confusion_mats = np.array(
