@@ -1,6 +1,7 @@
 import numpy.typing as npt
 
 import numpy as np
+import networkx as nx
 import numpy.typing as npt
 
 from numba import njit
@@ -9,7 +10,7 @@ from scipy import sparse
 from .calc_agreement_mat import calc_agreement_mat
 
 
-# @njit
+@njit
 def _calc_edge_weights(
     response_mat: npt.NDArray,
     workers: npt.NDArray,
@@ -132,7 +133,7 @@ class MinTree:
             curr = parent
 
 
-def _peel(biadj_mat: npt.NDArray):
+def _greedy(biadj_mat: npt.NDArray):
     """
     Run peeling algorithm on a bipartite graph. Implementation is based on
     Fraudar [1].
@@ -198,6 +199,83 @@ def _peel(biadj_mat: npt.NDArray):
     return workers_order, tasks_order
 
 
+def _greedy_pp(biadj_mat: npt.NDArray, iterations: int = 10):
+    # Construct adjacency matrix from bi-adjacency of bipartite graph
+    n_workers, n_tasks = biadj_mat.shape
+    adj = np.block(
+        [
+            [np.zeros((n_workers, n_workers)), biadj_mat],
+            [biadj_mat.T, np.zeros((n_tasks, n_tasks))],
+        ]
+    )
+    G = nx.from_numpy_array(adj)
+
+    loads = dict.fromkeys(G.nodes, 0)  # Load vector for Greedy++.
+    best_density = 0.0  # Highest density encountered.
+    best_subgraph = set()  # Nodes of the best subgraph found.
+    
+    for _ in range(iterations):
+        # Initialize heap for fast access to minimum weighted degree.
+        heap = nx.utils.BinaryHeap()
+
+        # Compute initial weighted degrees and add nodes to the heap.
+        for node, degree in G.degree:
+            heap.insert(node, loads[node] + degree)
+
+        # Set up tracking for current graph state.
+        remaining_nodes = set(G.nodes)
+        num_edges = G.number_of_edges()
+        current_degrees = dict(G.degree)
+
+        iter_node_order = []
+        best_subgraph_updated = False
+        while remaining_nodes:
+            num_nodes = len(remaining_nodes)
+
+            # Current density of the (implicit) graph
+            current_density = num_edges / num_nodes
+
+            # Update the best density.
+            if current_density > best_density:
+                best_density = current_density
+                best_subgraph = set(remaining_nodes)
+                best_subgraph_updated = True
+
+            # Pop the node with the smallest weighted degree.
+            node, _ = heap.pop()
+            if node not in remaining_nodes:
+                continue  # Skip nodes already removed.
+
+            iter_node_order.append(node)
+
+            # Update the load of the popped node.
+            loads[node] += current_degrees[node]
+
+            # Update neighbors' degrees and the heap.
+            for neighbor in G.neighbors(node):
+                if neighbor in remaining_nodes:
+                    current_degrees[neighbor] -= 1
+                    num_edges -= 1
+                    heap.insert(neighbor, loads[neighbor] + current_degrees[neighbor])
+
+            # Remove the node from the remaining nodes.
+            remaining_nodes.remove(node)
+
+        if best_subgraph_updated:
+            node_order = np.array(iter_node_order)
+
+    worker_order = node_order[node_order < n_workers]
+    task_order = node_order[node_order >= n_workers] - n_workers
+    
+    return worker_order, task_order
+
+def _peel(biadj_mat: npt.NDArray, peeler: str):
+    if peeler == "greedy":
+        return _greedy(biadj_mat)
+    elif peeler == "greedypp":
+        return _greedy_pp(biadj_mat)
+
+
 def _calc_adversary_scores(workers_order, tasks_order):
     """
     Calculate adversary scores of workers and tasks based on their peeling order
@@ -220,7 +298,7 @@ def _calc_adversary_scores(workers_order, tasks_order):
 
 
 def detect_attacks(
-    response_mat: npt.NDArray, kind: str = "binary"
+    response_mat: npt.NDArray, kind: str = "binary", peeler: str = "greedy"
 ) -> tuple[npt.NDArray, npt.NDArray]:
     """Detect adversarial workers and their targeted tasks.
 
@@ -239,17 +317,20 @@ def detect_attacks(
     ----------
     response_mat
         $(M, N)$ dimensional matrix where `response_mat[i, j]` is the label provided
-        by $i$th worker for $j$th task. `response_mat[i, j] = 0` is assumed to 
+        by $i$th worker for $j$th task. `response_mat[i, j] = 0` is assumed to
         indicate no label is given by $i$th worker for $j$th task.
     kind
         Kind of bipartite graph to constructed. Must be either "binary" or "weighted".
-        In latter case, the edges of the bipartite graph are weighted as described 
+        In latter case, the edges of the bipartite graph are weighted as described
         in [2].
+    peeler
+        Type of peeling algorithm to use. Currently, "greedy" and "greedypp" 
+        options are supported.
 
     Returns
     -------
-    worker_scores 
-        $(M, )$ dimensional array where `worker_scores[i]` is the adversary 
+    worker_scores
+        $(M, )$ dimensional array where `worker_scores[i]` is the adversary
         score of $i$th worker indicating the likelihood of $i$ being an adversary.
     task_scores
         $(N, )$ dimensional array where `task_scores[i]` is the adversary score
@@ -268,7 +349,7 @@ def detect_attacks(
     """
 
     biadj_mat = _construct_biadj_mat(response_mat, kind)
-    workers_order, tasks_order = _peel(biadj_mat)
+    workers_order, tasks_order = _peel(biadj_mat, peeler)
     worker_scores, task_scores = _calc_adversary_scores(workers_order, tasks_order)
 
     return worker_scores, task_scores
