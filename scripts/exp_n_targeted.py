@@ -2,27 +2,15 @@
 Experiment to observe the effect of number of adversaries on detection.
 """
 
-import glob
 
 from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import tikzplotlib
 
-from sklearn.metrics import average_precision_score as auprc
-from sklearn.metrics import roc_auc_score as auroc
-from matplotlib.ticker import FormatStrFormatter
-
-import aad
 import commons
 
-sns.set_theme(context="paper", style="whitegrid", palette="Set1")
-plt.style.use(Path(commons.PROJECT_DIR, "scripts", "style.txt"))
-colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#f781bf", "#a65628"]
 
 # Other simulation parameters
 ADV_FRAC = 0.3  # ratio of adversaries to honest workers

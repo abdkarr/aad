@@ -40,7 +40,7 @@ def cli():
     help="Fraction of adversaries to add the dataset",
 )
 @click.option(
-    "--aggregatore",
+    "--aggregator",
     default="wmv",
     show_default=True,
     type=click.Choice(["wmv", "wds"]),
