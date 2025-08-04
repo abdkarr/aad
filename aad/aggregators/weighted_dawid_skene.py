@@ -4,55 +4,31 @@ import numpy.typing as npt
 from scipy import sparse
 
 from . import majority_voting
+from . import weighted_majority_voting
 
 
-def _apply(response_mat: npt.NDArray, max_iter: int = 100, tol: float = 1e-6) -> dict:
-    r"""Apply Dawid-Skene aggregation to a crowdsourced dataset.
+def _e_step():
+    pass
 
-    This function use majority-voting for initializing the Expectation-Maximization (EM)
-    algorithm.
 
-    !!! Example
-        The following code applies Dawid-Skene to estimate task labels of RTE
-        dataset.
+def _m_step():
+    pass
 
-        ```python
-        from pathlib import Path
 
-        import aad
+def _sigmoid(x,shift=0.2, scale=5):
+    return np.exp(-(x - shift) * scale * 10) / (1 + np.exp(-(x - shift) * scale * 10))
 
-        data_dir = Path(".")
-        response_mat, gt_labels = aad.datasets.read_rte(data_dir)
-        ds_out = aad.dawid_skene(response_mat)
-        ```
 
-    Parameters
-    ----------
-    response_mat
-        $(M, N)$ dimensional matrix where `response_mat[i, j]` is the label provided
-        by $i$th worker for $j$th task. `response_mat[i, j] = 0` is assumed to
-        indicate no label is given by $i$th worker for $j$th task.
-    max_iter
-        Maximum number EM iterations
-    tol
-        Tolarance to use convergence. At each EM iteration, the changes in model
-        parameters and task classification probabilities are calculated. If the
-        change is smaller than `tol`, EM is deemed as converged.
-
-    Returns
-    -------
-    out : dict
-        Output dictionary consisting of following elements:
-
-        - *"labels"*: $(N, )$ dimensional array where `out["labels"][i]` is
-        the label estimated for $i$th task.
-        - *"probs"*: $(N, K)$ dimensional array where `out["probs"][i, j]`
-        is the probability of $i$th task being $j$th class.
-        - *"confusion_mats"*: $(M, K, K)$ dimensional array where
-        `out["confusion_mats][i, :, :]` is the estimated confusion matrix of 
-        $i$th worker.
-        - *"class_priors"*: $(K, )$ dimensional array of estimated class priors.
-    """
+def _apply(
+    response_mat: npt.NDArray,
+    worker_scores: npt.NDArray,
+    task_scores: npt.NDArray,
+    kind: str = "weighted-EM",
+    scale: float = 5,
+    shift: float = 0.3,
+    max_iter: int = 100,
+    tol: float = 1e-6,
+) -> dict:
 
     n_workers, n_tasks = response_mat.shape
 
@@ -64,14 +40,26 @@ def _apply(response_mat: npt.NDArray, max_iter: int = 100, tol: float = 1e-6) ->
     # Initialize structure for EM algorithm
     onehot_labels = []
     confusion_mats = []
-    mv_labels = majority_voting._apply(response_mat)
+    mv_labels = weighted_majority_voting._apply(
+        response_mat, worker_scores, task_scores
+    )
     for m in range(n_workers):
         m_tasks = np.where(response_mat[m, :])[0]
         m_responses = np.array([class_to_idx[l] for l in response_mat[m, m_tasks]])
+        
+        if kind == "weighted-EM":
+            weights = [
+                1
+                - _sigmoid(1 - worker_scores[m], scale=scale, shift=shift)
+                * _sigmoid(1 - task_scores[t], scale=scale, shift=shift)
+                for t in m_tasks
+            ]
+        else: 
+            weights = [1] * len(m_tasks)
 
         onehot_labels.append(
             sparse.csr_array(
-                ([1] * len(m_tasks), (m_tasks, m_responses)), shape=(n_tasks, n_classes)
+                (weights, (m_tasks, m_responses)), shape=(n_tasks, n_classes)
             )
         )
 

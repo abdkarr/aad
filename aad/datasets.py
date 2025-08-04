@@ -8,8 +8,14 @@ import pandas as pd
 import numpy as np
 import numpy.typing as npt
 
-from scipy import sparse
+from scipy.io import loadmat
 
+def _preprocess(response_mat: npt.NDArray) -> npt.NDArray:
+    # remove workers less than 5 labels 
+    n_tasks_per_worker = np.count_nonzero(response_mat, axis=1)
+    response_mat = response_mat[n_tasks_per_worker >= 10, :]
+
+    return response_mat
 
 def read_rte(
     root_dir: os.PathLike | str, download: bool | None = True
@@ -18,12 +24,12 @@ def read_rte(
 
     This function looks for the data file `root_dir/rte/rte.standardized.tsv`
     to read RTE dataset. If this file does not exist and parameter `download`
-    is True, it will attempt to download the file from the remote server at 
+    is True, it will attempt to download the file from the remote server at
     [here](https://web.archive.org/web/20230331023329/https://sites.google.com/site/nlpannotations/).
 
     ??? Example
         The following code uses `data` folder under current working directory
-        as `root_dir` and loads (and downloads if not exist) the RTE data.  
+        as `root_dir` and loads (and downloads if not exist) the RTE data.
 
         ```python
         from pathlib import Path
@@ -126,5 +132,26 @@ def read_rte(
     gt_labels = np.zeros(n_tasks, dtype=np.int64)
     for i, row in gt_df.iterrows():
         gt_labels[task_to_idx[row["task_id"]]] = class_to_idx[row["gt"]]
+
+    response_mat = _preprocess(response_mat)
+
+    return response_mat, gt_labels
+
+
+def read_mat_file(
+    root_dir: os.PathLike | str, dataset: str
+) -> tuple[npt.NDArray, npt.NDArray]:
+    
+    fname = Path(root_dir, f"{dataset}.mat")
+    data_dict = loadmat(fname, squeeze_me=True)
+    response_mat = data_dict["f"]
+    gt_labels = data_dict["y"]
+
+    # Remove tasks with no ground truth information
+    valid_tasks = data_dict["valid_index"] - 1
+    response_mat = response_mat[:, valid_tasks]
+    gt_labels = gt_labels[valid_tasks]
+
+    response_mat = _preprocess(response_mat)
 
     return response_mat, gt_labels
