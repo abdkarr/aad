@@ -2,21 +2,35 @@
 Experiment to observe the effect of number of adversaries on detection.
 """
 
+import glob
+
 from pathlib import Path
 
 import click
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import tikzplotlib
 
+from sklearn.metrics import average_precision_score as auprc
+from sklearn.metrics import roc_auc_score as auroc
+from matplotlib.ticker import FormatStrFormatter
+
+import aad
 import commons
 
+sns.set_theme(context="paper", style="whitegrid", palette="Set1")
+plt.style.use(Path(commons.PROJECT_DIR, "scripts", "style.txt"))
+colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#f781bf", "#a65628"]
+
 # Other simulation parameters
-TARGET_FRAC = 0.2  # percentage of tasks targeted by adversaries
+ADV_FRAC = 0.3  # ratio of adversaries to honest workers
 TARGET_OBS = 0.3
 CAMO_RELIABILITY = 2
 N_RUNS = 20
 
-exp_name = f"adv-frac-tf{TARGET_FRAC:.2f}-to{TARGET_OBS:.2f}-cr{CAMO_RELIABILITY:.2f}"
+exp_name = f"target-frac-af{ADV_FRAC:.2f}-to{TARGET_OBS:.2f}-cr{CAMO_RELIABILITY:.2f}"
 
 
 @click.group()
@@ -33,21 +47,21 @@ def cli():
     help="Dataset to work on",
 )
 @click.option(
-    "--adv-frac",
+    "--target-frac",
     default=0.1,
     type=float,
     show_default=True,
     help="Fraction of adversaries to add the dataset",
 )
 @click.option(
-    "--aggregatore",
+    "--aggregator",
     default="wmv",
-    show_default=True,
     type=click.Choice(["wmv", "wds"]),
-    help="Methods to use for fusion step",
+    show_default=True,
+    help="Methods to use for detection",
 )
-def run(dataset: str, adv_frac: float, aggregator: str):
-    exp_dir = Path(commons.OUTPUT_DIR, dataset, exp_name, f"{adv_frac:.2f}")
+def run(dataset: str, target_frac: float, aggregator: str):
+    exp_dir = Path(commons.OUTPUT_DIR, dataset, exp_name, f"{target_frac:.2f}")
 
     # Read the original dataset, assumed to be clean
     honest_responses, gt_labels = commons.DATASET_LOADER[dataset](commons.INPUT_DIR)
@@ -57,15 +71,13 @@ def run(dataset: str, adv_frac: float, aggregator: str):
     # Generate (or read if exists) simulation data
     exp_params = {
         "n_runs": N_RUNS,
-        "n_adversaries": int(np.floor(adv_frac * n_honests)),
-        "target_frac": TARGET_FRAC,
+        "n_adversaries": int(np.floor(ADV_FRAC * n_honests)),
+        "target_frac": target_frac,
         "camo_obs": honest_obs,
         "target_obs": TARGET_OBS,
         "camo_reliability": CAMO_RELIABILITY,
     }
-    adv_responses, _ = commons.gen_adversary_responses(
-        dataset, exp_dir, exp_params
-    )
+    adv_responses, _ = commons.gen_adversary_responses(dataset, exp_dir, exp_params)
 
     # Define output data structures
     fusion_perf = {"Run": [], "Method": [], "Accuracy": []}
